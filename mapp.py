@@ -136,7 +136,15 @@ with m3:
     st.metric("Avg DSRE", f"{filtered['DSRE'].mean()*100:.1f}%")
 
 # ---------- MAIN TABS ----------
-tabs = st.tabs(["🧾 Well Overview", "📋 Summary & Charts", "📊 Statistical Insights", "📈 Advanced Analytics", "🧮 Multi-Well Comparison"])
+tabs = st.tabs([
+    "🧾 Well Overview",
+    "📋 Summary & Charts",
+    "📊 Statistical Insights",
+    "📈 Advanced Analytics",
+    "🧮 Multi-Well Comparison",
+    "💲 Cost Comparison"
+])
+
 
 
 
