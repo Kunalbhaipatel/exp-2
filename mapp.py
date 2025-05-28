@@ -136,15 +136,7 @@ with m3:
     st.metric("Avg DSRE", f"{filtered['DSRE'].mean()*100:.1f}%")
 
 # ---------- MAIN TABS ----------
-tabs = st.tabs([
-    "🧾 Well Overview",
-    "📋 Summary & Charts",
-    "📊 Statistical Insights",
-    "📈 Advanced Analytics",
-    "🧮 Multi-Well Comparison",
-    "💲 Cost Comparison"
-])
-
+tabs = st.tabs(["🧾 Well Overview", "📋 Summary & Charts", "📊 Statistical Insights", "📈 Advanced Analytics", "🧮 Multi-Well Comparison", "💲 Cost Comparison"])
 
 
 
@@ -440,6 +432,8 @@ This section compares **shaker performance** across rig setups:
     else:
         st.warning("⚠️ 'flowline_Shakers' column not found in dataset.")
 
+
+
 # ---------- TAB 6: COST COMPARISON ----------
 with tabs[5]:
     st.markdown("## 💲 Cost Comparison Overview")
@@ -470,7 +464,7 @@ with tabs[5]:
             screen_total = num_screens * (operating_days / screen_life) * screen_cost
             equip_total = len(df["Well_Name"].unique()) * operating_days * equip_rate_per_day
             eng_total = len(df["Well_Name"].unique()) * operating_days * eng_support_per_day
-            other = 0  # Optional static cost
+            other = 0
             depth = df["Depth"].sum() if "Depth" in df.columns else 1
             total_cost = screen_total + equip_total + eng_total + other
             cpf = total_cost / depth if depth else 0
@@ -480,14 +474,12 @@ with tabs[5]:
         n_total, n_cpf, n_scr, n_eq, n_eng, n_oth, n_depth = compute_dynamic_cost(non_derrick_df)
         saving = n_total - d_total
 
-        # --- Metrics ---
         c1, c2 = st.columns(2)
         with c1:
             st.metric("💰 Total Saving", f"${saving:,.2f}")
         with c2:
             st.metric("📉 Cost Per Foot Diff", f"${(d_cpf - n_cpf):.2f}")
 
-        # --- Cost Comparison Table ---
         st.markdown("### 📊 Cost Component Breakdown")
         breakdown_df = pd.DataFrame({
             "Metric": ["Screen Cost", "Equipment Cost", "Engineering Cost", "Other Cost", "Total"],
@@ -496,7 +488,6 @@ with tabs[5]:
         })
         st.dataframe(breakdown_df, use_container_width=True)
 
-        # --- Bar Chart Comparison ---
         st.markdown("### 📈 Total Cost Comparison")
         bar_df = pd.DataFrame({
             "Shaker Type": ["Derrick", "Non-Derrick"],
@@ -505,7 +496,6 @@ with tabs[5]:
         fig = px.bar(bar_df, x="Shaker Type", y="Total Cost", color="Shaker Type", title="Total Cost: Derrick vs Non-Derrick")
         st.plotly_chart(fig, use_container_width=True)
 
-        # --- Pie Chart Breakdown for Derrick ---
         st.markdown("### 🧩 Derrick Cost Breakdown")
         derrick_pie_df = pd.DataFrame({
             "Cost Component": ["Screen", "Equipment", "Engineering", "Other"],
