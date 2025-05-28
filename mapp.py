@@ -136,7 +136,7 @@ with m3:
     st.metric("Avg DSRE", f"{filtered['DSRE'].mean()*100:.1f}%")
 
 # ---------- MAIN TABS ----------
-tabs = st.tabs(["🧾 Well Overview", "📋 Summary & Charts", "📊 Statistical Insights", "📈 Advanced Analytics", "🧮 Multi-Well Comparison", "💲 Cost Comparison"])
+tabs = st.tabs(["🧾 Well Overview", "📋 Summary & Charts", "📊 Statistical Insights", "📈 Advanced Analytics", "🧮 Multi-Well Comparison", "Cost Comparison"])
 
 
 
@@ -436,7 +436,8 @@ This section compares **shaker performance** across rig setups:
 
 # ---------- TAB 6: COST COMPARISON ----------
 with tabs[5]:
-    st.markdown("## 💲 Cost Comparison Overview")
+    st.markdown("### 🧮 Cost Comparison Tab Loaded Successfully")
+    st.markdown("## Cost Comparison Overview")
 
     # --- User Inputs ---
     with st.expander("🔧 Adjust Cost Parameters", expanded=True):
