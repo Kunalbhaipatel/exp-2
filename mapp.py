@@ -136,7 +136,7 @@ with m3:
     st.metric("Avg DSRE", f"{filtered['DSRE'].mean()*100:.1f}%")
 
 # ---------- MAIN TABS ----------
-tabs = st.tabs(["🧾 Well Overview", "📋 Summary & Charts", "📊 Statistical Insights", "📈 Advanced Analytics", "🧮 Multi-Well Comparison", "💲 Cost Comparison"])
+tabs = st.tabs(["🧾 Well Overview", "📋 Summary & Charts", "📊 Statistical Insights", "📈 Advanced Analytics", "🧮 Multi-Well Comparison"])
 
 
 
@@ -434,30 +434,25 @@ This section compares **shaker performance** across rig setups:
 
 
 
-if len(tabs) > 5:
+# ---------- BUTTON-BASED COST COMPARISON ----------
+if st.button("📊 Run Cost Comparison Analysis"):
+    st.markdown("## 💲 Cost Comparison Results")
 
-# ---------- TAB 6: COST COMPARISON ----------
-    with tabs[5]:
-    st.markdown("## 💲 Cost Comparison Overview")
-
-    # --- User Inputs ---
     with st.expander("🔧 Adjust Cost Parameters", expanded=True):
         col1, col2, col3 = st.columns(3)
         with col1:
-            screen_cost = st.number_input("🧪 Screen Unit Cost ($)", value=50.0, min_value=1.0, step=1.0)
-            screen_life = st.number_input("🕓 Avg Screen Life (days)", value=7.0, min_value=1.0, step=1.0)
+            screen_cost = st.number_input("🧪 Screen Unit Cost ($)", value=50.0, min_value=1.0, step=1.0, key="scr_cost")
+            screen_life = st.number_input("🕓 Avg Screen Life (days)", value=7.0, min_value=1.0, step=1.0, key="scr_life")
         with col2:
-            equip_rate_per_day = st.number_input("🔩 Equipment Rental ($/day)", value=2500.0, min_value=0.0, step=100.0)
-            eng_support_per_day = st.number_input("👷 Engineering Cost ($/day)", value=150.0, min_value=0.0, step=10.0)
+            equip_rate_per_day = st.number_input("🔩 Equipment Rental ($/day)", value=2500.0, min_value=0.0, step=100.0, key="equip_rate")
+            eng_support_per_day = st.number_input("👷 Engineering Cost ($/day)", value=150.0, min_value=0.0, step=10.0, key="eng_rate")
         with col3:
-            operating_days = st.number_input("📆 Operating Days", value=10, min_value=1, step=1)
+            operating_days = st.number_input("📆 Operating Days", value=10, min_value=1, step=1, key="op_days")
 
-    # --- Apply to Data ---
     if "flowline_Shakers" in filtered.columns:
         filtered["Shaker_Type"] = filtered["flowline_Shakers"].apply(
             lambda x: "Derrick" if isinstance(x, str) and "derrick" in x.lower() else "Non-Derrick"
         )
-
         derrick_df = filtered[filtered["Shaker_Type"] == "Derrick"]
         non_derrick_df = filtered[filtered["Shaker_Type"] == "Non-Derrick"]
 
