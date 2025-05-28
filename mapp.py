@@ -434,20 +434,22 @@ This section compares **shaker performance** across rig setups:
 
 
 
-# ---------- BUTTON-BASED COST COMPARISON ----------
-if st.button("📊 Run Cost Comparison Analysis"):
+# ---------- BUTTON-BASED ENHANCED COST COMPARISON ----------
+if st.button("📊 Run Enhanced Cost Comparison"):
     st.markdown("## 💲 Cost Comparison Results")
 
     with st.expander("🔧 Adjust Cost Parameters", expanded=True):
         col1, col2, col3 = st.columns(3)
         with col1:
-            screen_cost = st.number_input("🧪 Screen Unit Cost ($)", value=50.0, min_value=1.0, step=1.0, key="scr_cost")
-            screen_life = st.number_input("🕓 Avg Screen Life (days)", value=7.0, min_value=1.0, step=1.0, key="scr_life")
+            d_screen_cost = st.number_input("🟩 Derrick Screen Unit Cost ($)", value=50.0, min_value=1.0, step=1.0, key="d_scr_cost")
+            nd_screen_cost = st.number_input("🟥 Non-Derrick Screen Unit Cost ($)", value=55.0, min_value=1.0, step=1.0, key="nd_scr_cost")
         with col2:
-            equip_rate_per_day = st.number_input("🔩 Equipment Rental ($/day)", value=2500.0, min_value=0.0, step=100.0, key="equip_rate")
-            eng_support_per_day = st.number_input("👷 Engineering Cost ($/day)", value=150.0, min_value=0.0, step=10.0, key="eng_rate")
+            d_equip_rate = st.number_input("🟩 Derrick Equipment Rental ($/day)", value=2500.0, min_value=0.0, step=100.0, key="d_eq_rate")
+            nd_equip_rate = st.number_input("🟥 Non-Derrick Equipment Rental ($/day)", value=1250.0, min_value=0.0, step=100.0, key="nd_eq_rate")
         with col3:
-            operating_days = st.number_input("📆 Operating Days", value=10, min_value=1, step=1, key="op_days")
+            screen_life = st.number_input("🕓 Avg Screen Life (days)", value=7.0, min_value=1.0, step=1.0, key="life")
+            eng_rate = st.number_input("👷 Engineering Cost ($/day)", value=150.0, min_value=0.0, step=10.0, key="eng_rate")
+            op_days = st.number_input("📆 Operating Days", value=10, min_value=1, step=1, key="op_days")
 
     if "flowline_Shakers" in filtered.columns:
         filtered["Shaker_Type"] = filtered["flowline_Shakers"].apply(
@@ -456,34 +458,35 @@ if st.button("📊 Run Cost Comparison Analysis"):
         derrick_df = filtered[filtered["Shaker_Type"] == "Derrick"]
         non_derrick_df = filtered[filtered["Shaker_Type"] == "Non-Derrick"]
 
-        def compute_dynamic_cost(df):
+        def calc_cost(df, screen_cost, equip_rate):
             num_screens = len(df)
-            screen_total = num_screens * (operating_days / screen_life) * screen_cost
-            equip_total = len(df["Well_Name"].unique()) * operating_days * equip_rate_per_day
-            eng_total = len(df["Well_Name"].unique()) * operating_days * eng_support_per_day
-            other = 0
+            wells = df["Well_Name"].nunique()
+            scr = num_screens * (op_days / screen_life) * screen_cost
+            eq = wells * op_days * equip_rate
+            eng = wells * op_days * eng_rate
+            total = scr + eq + eng
             depth = df["Depth"].sum() if "Depth" in df.columns else 1
-            total_cost = screen_total + equip_total + eng_total + other
-            cpf = total_cost / depth if depth else 0
-            return total_cost, cpf, screen_total, equip_total, eng_total, other, depth
+            cpf = total / depth if depth else 0
+            return total, cpf, scr, eq, eng, depth
 
-        d_total, d_cpf, d_scr, d_eq, d_eng, d_oth, d_depth = compute_dynamic_cost(derrick_df)
-        n_total, n_cpf, n_scr, n_eq, n_eng, n_oth, n_depth = compute_dynamic_cost(non_derrick_df)
+        d_total, d_cpf, d_scr, d_eq, d_eng, d_depth = calc_cost(derrick_df, d_screen_cost, d_equip_rate)
+        n_total, n_cpf, n_scr, n_eq, n_eng, n_depth = calc_cost(non_derrick_df, nd_screen_cost, nd_equip_rate)
+
         saving = n_total - d_total
 
         c1, c2 = st.columns(2)
         with c1:
             st.metric("💰 Total Saving", f"${saving:,.2f}")
         with c2:
-            st.metric("📉 Cost Per Foot Diff", f"${(d_cpf - n_cpf):.2f}")
+            st.metric("📉 Cost Per Foot Diff", f"${(d_cpf - n_cpf):,.2f}")
 
         st.markdown("### 📊 Cost Component Breakdown")
-        breakdown_df = pd.DataFrame({
+        cost_df = pd.DataFrame({
             "Metric": ["Screen Cost", "Equipment Cost", "Engineering Cost", "Other Cost", "Total"],
-            "Derrick": [d_scr, d_eq, d_eng, d_oth, d_total],
-            "Non-Derrick": [n_scr, n_eq, n_eng, n_oth, n_total]
+            "Derrick": [d_scr, d_eq, d_eng, 0, d_total],
+            "Non-Derrick": [n_scr, n_eq, n_eng, 0, n_total]
         })
-        st.dataframe(breakdown_df, use_container_width=True)
+        st.dataframe(cost_df, use_container_width=True)
 
         st.markdown("### 📈 Total Cost Comparison")
         bar_df = pd.DataFrame({
@@ -494,11 +497,11 @@ if st.button("📊 Run Cost Comparison Analysis"):
         st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("### 🧩 Derrick Cost Breakdown")
-        derrick_pie_df = pd.DataFrame({
-            "Cost Component": ["Screen", "Equipment", "Engineering", "Other"],
-            "Cost": [d_scr, d_eq, d_eng, d_oth]
+        derrick_pie = pd.DataFrame({
+            "Cost Component": ["Screen", "Equipment", "Engineering"],
+            "Cost": [d_scr, d_eq, d_eng]
         })
-        fig_pie = px.pie(derrick_pie_df, names="Cost Component", values="Cost", title="Derrick Cost Structure")
-        st.plotly_chart(fig_pie, use_container_width=True)
+        pie_fig = px.pie(derrick_pie, names="Cost Component", values="Cost", title="Derrick Cost Split")
+        st.plotly_chart(pie_fig, use_container_width=True)
     else:
         st.warning("⚠️ 'flowline_Shakers' column not found.")
