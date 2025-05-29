@@ -1,4 +1,4 @@
-
+# full_fixed_dashboard.py
 import pandas as pd
 import streamlit as st
 import plotly.express as px
@@ -6,46 +6,47 @@ import plotly.express as px
 st.set_page_config(page_title="Rig Comparison Dashboard", layout="wide")
 st.title("🚀 Rig Comparison Dashboard")
 
-# ---------- LOAD DATA ----------
-default_path = "Updated_Merged_Data_with_API_and_Location.csv"
-data = pd.read_csv(default_path)
+@st.cache_data
 
-if "Efficiency Score" in data.columns and data["Efficiency Score"].isnull().all():
-    data.drop(columns=["Efficiency Score"], inplace=True)
+def load_data():
+    df = pd.read_csv("Updated_Merged_Data_with_API_and_Location.csv")
+    if "Efficiency Score" in df.columns and df["Efficiency Score"].isnull().all():
+        df.drop(columns=["Efficiency Score"], inplace=True)
+    return df
 
-# ---------- GLOBAL SEARCH ----------
+data = load_data()
+filtered = data.copy()
+
 with st.container():
-    st.markdown("### 🔍 Global Search")
-    search_term = st.text_input("Type any keyword (well, state, date, value...) to search all columns:")
-    reset_filters = st.button("🔄 Reset All Filters")
-    if reset_filters:
-        st.experimental_rerun()
-
-    if search_term:
-        search_term = search_term.lower()
-        data = data[data.apply(lambda row: row.astype(str).str.lower().str.contains(search_term).any(), axis=1)]
-        st.success(f"🔎 Found {len(data)} matching rows.")
-    filtered = data
-
-# ---------- FILTER BAR ----------
-with st.container():
-    st.markdown("### 🎛️ Filter by Key Dimensions")
-    col1, col2, col3, col4 = st.columns(4)
+    col_search, col1, col2, col3, col4 = st.columns([2.5, 1.2, 1.2, 1.2, 1.2])
+    with col_search:
+        st.markdown("🔍 **Global Search**")
+        search_term = st.text_input("Search any column...")
+        if search_term:
+            search_term = search_term.lower()
+            filtered = filtered[filtered.apply(lambda row: row.astype(str).str.lower().str.contains(search_term).any(), axis=1)]
+            st.success(f"🔎 Found {len(filtered)} matching rows.")
     with col1:
         selected_operator = st.selectbox("Operator", ["All"] + sorted(data["Operator"].dropna().unique().tolist()))
+        if selected_operator != "All":
+            filtered = filtered[filtered["Operator"] == selected_operator]
     with col2:
-        filtered_by_op = data if selected_operator == "All" else data[data["Operator"] == selected_operator]
-        selected_contractor = st.selectbox("Contractor", ["All"] + sorted(filtered_by_op["Contractor"].dropna().unique().tolist()))
+        selected_contractor = st.selectbox("Contractor", ["All"] + sorted(data["Contractor"].dropna().unique().tolist()))
+        if selected_contractor != "All":
+            filtered = filtered[filtered["Contractor"] == selected_contractor]
     with col3:
-        filtered_by_contractor = filtered_by_op if selected_contractor == "All" else filtered_by_op[filtered_by_op["Contractor"] == selected_contractor]
-        selected_shaker = st.selectbox("Shaker", ["All"] + sorted(filtered_by_contractor["flowline_Shakers"].dropna().unique().tolist()))
+        if "flowline_Shakers" in data.columns:
+            selected_shaker = st.selectbox("Shaker", ["All"] + sorted(data["flowline_Shakers"].dropna().unique().tolist()))
+            if selected_shaker != "All":
+                filtered = filtered[filtered["flowline_Shakers"] == selected_shaker]
+        else:
+            st.warning("⚠️ 'flowline_Shakers' column not found in dataset.")
     with col4:
-        filtered_by_shaker = filtered_by_contractor if selected_shaker == "All" else filtered_by_contractor[filtered_by_contractor["flowline_Shakers"] == selected_shaker]
-        selected_hole = st.selectbox("Hole Size", ["All"] + sorted(filtered_by_shaker["Hole_Size"].dropna().unique().tolist()))
+        if "Hole_Size" in data.columns:
+            selected_hole = st.selectbox("Hole Size", ["All"] + sorted(data["Hole_Size"].dropna().unique().tolist()))
+            if selected_hole != "All":
+                filtered = filtered[filtered["Hole_Size"] == selected_hole]
 
-    filtered = filtered_by_shaker if selected_hole == "All" else filtered_by_shaker[filtered_by_shaker["Hole_Size"] == selected_hole]
-
-# ---------- METRICS ----------
 st.markdown("### 📊 Key Metrics")
 m1, m2, m3 = st.columns(3)
 with m1:
@@ -54,6 +55,21 @@ with m2:
     st.metric("Avg SCE", f"{filtered['Total_SCE'].mean():,.2f}")
 with m3:
     st.metric("Avg DSRE", f"{filtered['DSRE'].mean()*100:.1f}%")
+
+tabs = st.tabs(["Well Overview", "Summary & Charts", "Statistical Insights", "Advanced Analytics", "Derrick Comparison", "Advanced Filters"])
+
+with tabs[0]:
+    st.subheader("📄 Well Overview")
+    st.markdown("Analyze well-level performance metrics as grouped column bar charts.")
+    selected_metric = st.selectbox("Choose a metric to visualize", ["Total_Dil", "Total_SCE", "DSRE"])
+    if "Well_Name" in filtered.columns and selected_metric in filtered.columns:
+        metric_data = filtered[["Well_Name", selected_metric]].dropna()
+        metric_data = metric_data.groupby("Well_Name")[selected_metric].mean().reset_index()
+        metric_data.rename(columns={selected_metric: "Value"}, inplace=True)
+        fig = px.bar(metric_data, x="Well_Name", y="Value", title=f"Well Name vs {selected_metric}")
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("⚠️ Required columns not found.")
 
 # ---------- MAIN TABS ----------
 tabs = st.tabs([
