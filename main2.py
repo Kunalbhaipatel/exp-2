@@ -3,7 +3,6 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
-# ---------- TITLE ----------
 st.set_page_config(page_title="Rig Comparison Dashboard", layout="wide")
 st.title("🚀 Rig Comparison Dashboard")
 
@@ -18,12 +17,15 @@ if "Efficiency Score" in data.columns and data["Efficiency Score"].isnull().all(
 with st.container():
     st.markdown("### 🔍 Global Search")
     search_term = st.text_input("Type any keyword (well, state, date, value...) to search all columns:")
+    reset_filters = st.button("🔄 Reset All Filters")
+    if reset_filters:
+        st.experimental_rerun()
+
     if search_term:
         search_term = search_term.lower()
-        filtered = data[data.apply(lambda row: row.astype(str).str.lower().str.contains(search_term).any(), axis=1)]
-        st.success(f"🔎 Showing {len(filtered)} matching records")
-    else:
-        filtered = data
+        data = data[data.apply(lambda row: row.astype(str).str.lower().str.contains(search_term).any(), axis=1)]
+        st.success(f"🔎 Found {len(data)} matching rows.")
+    filtered = data
 
 # ---------- FILTER BAR ----------
 with st.container():
@@ -43,7 +45,7 @@ with st.container():
 
     filtered = filtered_by_shaker if selected_hole == "All" else filtered_by_shaker[filtered_by_shaker["Hole_Size"] == selected_hole]
 
-# ---------- METRICS SECTION ----------
+# ---------- METRICS ----------
 st.markdown("### 📊 Key Metrics")
 m1, m2, m3 = st.columns(3)
 with m1:
@@ -53,7 +55,7 @@ with m2:
 with m3:
     st.metric("Avg DSRE", f"{filtered['DSRE'].mean()*100:.1f}%")
 
-# ---------- TABS ----------
+# ---------- MAIN TABS ----------
 tabs = st.tabs([
     "🧾 Well Overview", 
     "📋 Summary & Charts", 
@@ -63,10 +65,11 @@ tabs = st.tabs([
     "⚙️ Advanced Tab"
 ])
 
-# ---------- TAB 6: ADVANCED FILTERS ----------
+# ---------- ADVANCED FILTERS TAB ----------
 with tabs[5]:
     st.markdown("### ⚙️ Advanced Filters")
-    st.info("Use sliders and date input to drill down on specific performance parameters.")
+    st.info("Use sliders and dropdowns to drill down on performance.")
+
     col1, col2 = st.columns(2)
     with col1:
         if "IntLength" in data.columns:
@@ -83,13 +86,28 @@ with tabs[5]:
             lgs_min, lgs_max = float(data["Average_LGS%"].min()), float(data["Average_LGS%"].max())
             lgs_range = st.slider("Average LGS%", lgs_min, lgs_max, (lgs_min, lgs_max))
             filtered = filtered[(filtered["Average_LGS%"] >= lgs_range[0]) & (filtered["Average_LGS%"] <= lgs_range[1])]
-        if "TD_Date" in data.columns:
-            data["TD_Date"] = pd.to_datetime(data["TD_Date"], errors='coerce')
-            td_min, td_max = data["TD_Date"].min(), data["TD_Date"].max()
-            td_range = st.date_input("TD Date Range", (td_min, td_max))
-            filtered = filtered[(data["TD_Date"] >= pd.to_datetime(td_range[0])) & (data["TD_Date"] <= pd.to_datetime(td_range[1]))]
 
-    st.markdown("### 🔍 Preview Filtered Results")
+        if "TD_Date" in data.columns and not data["TD_Date"].isnull().all():
+            try:
+                data["TD_Date"] = pd.to_datetime(data["TD_Date"], errors='coerce')
+                data["TD_Year"] = data["TD_Date"].dt.year
+                data["TD_Month"] = data["TD_Date"].dt.strftime('%B')
+
+                td_years = sorted(data["TD_Year"].dropna().unique())
+                td_months = ["January", "February", "March", "April", "May", "June",
+                             "July", "August", "September", "October", "November", "December"]
+
+                selected_year = st.selectbox("Select TD Year", options=["All"] + [int(y) for y in td_years])
+                selected_month = st.selectbox("Select TD Month", options=["All"] + td_months)
+
+                if selected_year != "All":
+                    filtered = filtered[filtered["TD_Year"] == selected_year]
+                if selected_month != "All":
+                    filtered = filtered[filtered["TD_Month"] == selected_month]
+            except Exception as e:
+                st.warning(f"⚠️ TD_Date processing failed: {e}")
+
+    st.markdown("### 🔍 Filtered Results Preview")
     st.dataframe(filtered)
 
 # ---------- FOOTER ----------
@@ -98,7 +116,6 @@ st.markdown("""
     &copy; 2025 Derrick Corp | Designed for drilling performance insights
 </div>
 """, unsafe_allow_html=True)
-
 
 # ---------- TAB 1: WELL OVERVIEW ----------
 with tabs[0]:
