@@ -54,19 +54,6 @@ with m2:
 with m3:
     st.metric("Avg DSRE", f"{filtered['DSRE'].mean()*100:.1f}%")
 
-# ---------- MAIN TABS ----------
-tabs = st.tabs([
-    "🧾 Well Overview",
-    "📋 Summary & Charts",
-    "📊 Statistical Insights",
-    "📈 Advanced Analytics",
-    "🧮 Multi-Well Comparison",
-    "⚙️ Advanced Tab"
-])
-
-# Add rest of tab code as done previously for each tab (due to space constraints)
-# You can copy and paste the corresponding tab logic from the previously saved responses or original file.
-
 # ---------- FOOTER ----------
 st.markdown("""
 <div style='position: fixed; left: 0; bottom: 0; width: 100%; background-color: #1c1c1c; color: white; text-align: center; padding: 8px 0; font-size: 0.9rem; z-index: 999;'>
@@ -74,7 +61,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("""Use the dashboard above to filter and explore well performance data across multiple dimensions like operator, contractor, and shaker type. Tabs contain specific analytics and insights. Charts and metrics update automatically based on filters above.""")
+# Tabs and additional charts would continue here in full script...
 
 # ---------- TAB 1: WELL OVERVIEW ----------
 with tabs[0]:
