@@ -1,132 +1,51 @@
-
 import pandas as pd
 import streamlit as st
 import plotly.express as px
-import pydeck as pdk
-import os
 
-st.set_page_config(layout="wide", page_title="Rig Comparison Dashboard", page_icon="📊")
+st.set_page_config(page_title="Rig Comparison Dashboard", layout="wide")
+st.title("🚀 Rig Comparison Dashboard")
 
-# ---------- Styling ----------
-st.markdown("""
-<style>
-body { background-color: #f5f7fa; }
-h1 {
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: #004578;
-}
-[data-testid="stMetric"] {
-  background-color: #ffffff;
-  border: 1px solid #d0d6dd;
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  text-align: center;
-}
-.stButton button {
-  background-color: #0078d4;
-  color: white;
-  font-weight: bold;
-  border-radius: 8px;
-  padding: 0.4rem 1rem;
-  border: none;
-  margin-top: 1.6rem;
-}
-.stButton button:hover {
-  background-color: #005ea2;
-}
-.stTabs [data-baseweb="tab"] {
-  font-size: 1rem;
-  padding: 10px;
-  border-radius: 8px 8px 0 0;
-  background-color: #eaf1fb;
-  color: #004578;
-  margin-right: 0.5rem;
-}
-.stTabs [aria-selected="true"] {
-  background-color: #0078d4 !important;
-  color: white !important;
-  font-weight: bold;
-}
-.stDataFrame {
-  border-radius: 12px;
-  border: 1px solid #d0d6dd;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ---------- Full-width Jet Black Header ----------
-st.markdown("""
-<style>
-.full-header {
-    position: relative;
-    left: 0;
-    top: 0;
-    width: 100%;
-    background-color: #1c1c1c;
-    color: white;
-    padding: 1rem 2rem;
-    margin-bottom: 1rem;
-    border-radius: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    z-index: 999;
-}
-.full-header h2 {
-    margin: 0;
-    font-size: 1.8rem;
-}
-</style>
-
-<div class='full-header'>
-    <div style='display: flex; align-items: center;'>
-        <img src='https://img.icons8.com/color/48/dashboard-layout.png' style='margin-right: 12px;'/>
-        <h2>Rig Comparison Dashboard</h2>
-    </div>
-    <div style='font-size: 0.9rem;'>Powered by ProdigyIQ</div>
-</div>
-""", unsafe_allow_html=True)
-
-# ---------- Load Data ----------
-default_path = os.path.join(os.path.dirname(__file__), "Updated_Merged_Data_with_API_and_Location.csv")
+# ---------- LOAD DATA ----------
+default_path = "Updated_Merged_Data_with_API_and_Location.csv"
 data = pd.read_csv(default_path)
+
 if "Efficiency Score" in data.columns and data["Efficiency Score"].isnull().all():
     data.drop(columns=["Efficiency Score"], inplace=True)
 
-# ---------- Jet Black Footer ----------
-st.markdown("""
-<div style='position: fixed; left: 0; bottom: 0; width: 100%; background-color: #1c1c1c; color: white; text-align: center; padding: 8px 0; font-size: 0.9rem; z-index: 999;'>
-    &copy; 2025 Derrick Corp | Designed for drilling performance insights
-</div>
-""", unsafe_allow_html=True)
-
-# ---------- App Content Begins ----------
-st.markdown("Use filters to explore well-level, shaker-type, and fluid performance metrics.")
-
-# Placeholder: You can now paste the full app logic (filters, tabs, charts, metrics...)
-# and insert the previously generated tooltips inside each tab as needed.
-# Filters
+# ---------- GLOBAL SEARCH ----------
 with st.container():
+    st.markdown("### 🔍 Global Search")
+    search_term = st.text_input("Type any keyword (well, state, date, value...) to search all columns:")
+    reset_filters = st.button("🔄 Reset All Filters")
+    if reset_filters:
+        st.experimental_rerun()
+
+    if search_term:
+        search_term = search_term.lower()
+        data = data[data.apply(lambda row: row.astype(str).str.lower().str.contains(search_term).any(), axis=1)]
+        st.success(f"🔎 Found {len(data)} matching rows.")
+    filtered = data
+
+# ---------- FILTER BAR ----------
+with st.container():
+    st.markdown("### 🎛️ Filter by Key Dimensions")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        selected_operator = st.selectbox("Select Operator", ["All"] + sorted(data["Operator"].dropna().unique().tolist()))
+        selected_operator = st.selectbox("Operator", ["All"] + sorted(data["Operator"].dropna().unique().tolist()))
     with col2:
         filtered_by_op = data if selected_operator == "All" else data[data["Operator"] == selected_operator]
-        selected_contractor = st.selectbox("Select Contractor", ["All"] + sorted(filtered_by_op["Contractor"].dropna().unique().tolist()))
+        selected_contractor = st.selectbox("Contractor", ["All"] + sorted(filtered_by_op["Contractor"].dropna().unique().tolist()))
     with col3:
         filtered_by_contractor = filtered_by_op if selected_contractor == "All" else filtered_by_op[filtered_by_op["Contractor"] == selected_contractor]
-        selected_shaker = st.selectbox("Select Shaker", ["All"] + sorted(filtered_by_contractor["flowline_Shakers"].dropna().unique().tolist()))
+        selected_shaker = st.selectbox("Shaker", ["All"] + sorted(filtered_by_contractor["flowline_Shakers"].dropna().unique().tolist()))
     with col4:
         filtered_by_shaker = filtered_by_contractor if selected_shaker == "All" else filtered_by_contractor[filtered_by_contractor["flowline_Shakers"] == selected_shaker]
-        selected_hole = st.selectbox("Select Hole Size", ["All"] + sorted(filtered_by_shaker["Hole_Size"].dropna().unique().tolist()))
+        selected_hole = st.selectbox("Hole Size", ["All"] + sorted(filtered_by_shaker["Hole_Size"].dropna().unique().tolist()))
 
     filtered = filtered_by_shaker if selected_hole == "All" else filtered_by_shaker[filtered_by_shaker["Hole_Size"] == selected_hole]
 
 # ---------- METRICS ----------
-st.markdown("### 📈 Key Performance Metrics")
+st.markdown("### 📊 Key Metrics")
 m1, m2, m3 = st.columns(3)
 with m1:
     st.metric("Avg Total Dilution", f"{filtered['Total_Dil'].mean():,.2f} BBLs")
@@ -136,9 +55,66 @@ with m3:
     st.metric("Avg DSRE", f"{filtered['DSRE'].mean()*100:.1f}%")
 
 # ---------- MAIN TABS ----------
-tabs = st.tabs(["🧾 Well Overview", "📋 Summary & Charts", "📊 Statistical Insights", "📈 Advanced Analytics", "🧮 Multi-Well Comparison"])
+tabs = st.tabs([
+    "🧾 Well Overview", 
+    "📋 Summary & Charts", 
+    "📊 Statistical Insights", 
+    "📈 Advanced Analytics", 
+    "🧮 Multi-Well Comparison", 
+    "⚙️ Advanced Tab"
+])
 
+# ---------- ADVANCED FILTERS TAB ----------
+with tabs[5]:
+    st.markdown("### ⚙️ Advanced Filters")
+    st.info("Use sliders and dropdowns to drill down on performance.")
 
+    col1, col2 = st.columns(2)
+    with col1:
+        if "IntLength" in data.columns:
+            min_val, max_val = int(data["IntLength"].min()), int(data["IntLength"].max())
+            int_range = st.slider("Interval Length", min_val, max_val, (min_val, max_val))
+            filtered = filtered[(filtered["IntLength"] >= int_range[0]) & (filtered["IntLength"] <= int_range[1])]
+        if "AMW" in data.columns:
+            min_amw, max_amw = float(data["AMW"].min()), float(data["AMW"].max())
+            amw_range = st.slider("Average Mud Weight (AMW)", min_amw, max_amw, (min_amw, max_amw))
+            filtered = filtered[(filtered["AMW"] >= amw_range[0]) & (filtered["AMW"] <= amw_range[1])]
+
+    with col2:
+        if "Average_LGS%" in data.columns:
+            lgs_min, lgs_max = float(data["Average_LGS%"].min()), float(data["Average_LGS%"].max())
+            lgs_range = st.slider("Average LGS%", lgs_min, lgs_max, (lgs_min, lgs_max))
+            filtered = filtered[(filtered["Average_LGS%"] >= lgs_range[0]) & (filtered["Average_LGS%"] <= lgs_range[1])]
+
+        if "TD_Date" in data.columns and not data["TD_Date"].isnull().all():
+            try:
+                data["TD_Date"] = pd.to_datetime(data["TD_Date"], errors='coerce')
+                data["TD_Year"] = data["TD_Date"].dt.year
+                data["TD_Month"] = data["TD_Date"].dt.strftime('%B')
+
+                td_years = sorted(data["TD_Year"].dropna().unique())
+                td_months = ["January", "February", "March", "April", "May", "June",
+                             "July", "August", "September", "October", "November", "December"]
+
+                selected_year = st.selectbox("Select TD Year", options=["All"] + [int(y) for y in td_years])
+                selected_month = st.selectbox("Select TD Month", options=["All"] + td_months)
+
+                if selected_year != "All":
+                    filtered = filtered[filtered["TD_Year"] == selected_year]
+                if selected_month != "All":
+                    filtered = filtered[filtered["TD_Month"] == selected_month]
+            except Exception as e:
+                st.warning(f"⚠️ TD_Date processing failed: {e}")
+
+    st.markdown("### 🔍 Filtered Results Preview")
+    st.dataframe(filtered)
+
+# ---------- FOOTER ----------
+st.markdown("""
+<div style='position: fixed; left: 0; bottom: 0; width: 100%; background-color: #1c1c1c; color: white; text-align: center; padding: 8px 0; font-size: 0.9rem; z-index: 999;'>
+    &copy; 2025 Derrick Corp | Designed for drilling performance insights
+</div>
+""", unsafe_allow_html=True)
 
 # ---------- TAB 1: WELL OVERVIEW ----------
 with tabs[0]:
