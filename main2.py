@@ -1,6 +1,5 @@
 
 import pandas as pd
-import pandas as pd
 import streamlit as st
 
 st.title("Rig Comparison Dashboard")
@@ -24,6 +23,17 @@ st.markdown("Use filters to explore well-level, shaker-type, and fluid performan
 # Placeholder: You can now paste the full app logic (filters, tabs, charts, metrics...)
 # and insert the previously generated tooltips inside each tab as needed.
 # Filters
+
+# ---------- GLOBAL SEARCH ----------
+st.markdown("### 🔎 Global Search")
+search_term = st.text_input("Search all columns for keyword:")
+if search_term:
+    search_term = search_term.lower()
+    filtered = data[data.apply(lambda row: row.astype(str).str.lower().str.contains(search_term).any(), axis=1)]
+    st.success(f"Found {len(filtered)} matching rows.")
+else:
+    filtered = data
+
 with st.container():
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -346,22 +356,3 @@ This section compares **shaker performance** across rig setups:
             st.info("ℹ️ Please select at least one metric to compare.")
     else:
         st.warning("⚠️ 'flowline_Shakers' column not found in dataset.")
-
-
-
-# Global Search Functionality
-st.subheader("🔍 Global Search")
-search_term = st.text_input("Enter keyword to search across all columns:")
-
-if search_term:
-    # Convert search term to lowercase
-    search_term = search_term.lower()
-
-    # Filter dataset based on whether any column contains the search term
-    mask = data.apply(lambda row: row.astype(str).str.lower().str.contains(search_term).any(), axis=1)
-    filtered_data = data[mask]
-
-    st.success(f"Displaying {len(filtered_data)} result(s) matching '{search_term}'")
-    st.dataframe(filtered_data)
-else:
-    st.dataframe(data)
