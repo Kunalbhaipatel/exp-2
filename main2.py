@@ -1,52 +1,47 @@
 
 import pandas as pd
+import pandas as pd
 import streamlit as st
-import plotly.express as px
 
-st.set_page_config(page_title="Rig Comparison Dashboard", layout="wide")
-st.title("🚀 Rig Comparison Dashboard")
+st.title("Rig Comparison Dashboard")
 
-# ---------- LOAD DATA ----------
 default_path = "Updated_Merged_Data_with_API_and_Location.csv"
 data = pd.read_csv(default_path)
 
 if "Efficiency Score" in data.columns and data["Efficiency Score"].isnull().all():
     data.drop(columns=["Efficiency Score"], inplace=True)
 
-# ---------- GLOBAL SEARCH ----------
-with st.container():
-    st.markdown("### 🔍 Global Search")
-    search_term = st.text_input("Type any keyword (well, state, date, value...) to search all columns:")
-    reset_filters = st.button("🔄 Reset All Filters")
-    if reset_filters:
-        st.experimental_rerun()
+# ---------- Jet Black Footer ----------
+st.markdown("""
+<div style='position: fixed; left: 0; bottom: 0; width: 100%; background-color: #1c1c1c; color: white; text-align: center; padding: 8px 0; font-size: 0.9rem; z-index: 999;'>
+    &copy; 2025 Derrick Corp | Designed for drilling performance insights
+</div>
+""", unsafe_allow_html=True)
 
-    if search_term:
-        search_term = search_term.lower()
-        data = data[data.apply(lambda row: row.astype(str).str.lower().str.contains(search_term).any(), axis=1)]
-        st.success(f"🔎 Found {len(data)} matching rows.")
-    filtered = data
+# ---------- App Content Begins ----------
+st.markdown("Use filters to explore well-level, shaker-type, and fluid performance metrics.")
 
-# ---------- FILTER BAR ----------
+# Placeholder: You can now paste the full app logic (filters, tabs, charts, metrics...)
+# and insert the previously generated tooltips inside each tab as needed.
+# Filters
 with st.container():
-    st.markdown("### 🎛️ Filter by Key Dimensions")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        selected_operator = st.selectbox("Operator", ["All"] + sorted(data["Operator"].dropna().unique().tolist()))
+        selected_operator = st.selectbox("Select Operator", ["All"] + sorted(data["Operator"].dropna().unique().tolist()))
     with col2:
         filtered_by_op = data if selected_operator == "All" else data[data["Operator"] == selected_operator]
-        selected_contractor = st.selectbox("Contractor", ["All"] + sorted(filtered_by_op["Contractor"].dropna().unique().tolist()))
+        selected_contractor = st.selectbox("Select Contractor", ["All"] + sorted(filtered_by_op["Contractor"].dropna().unique().tolist()))
     with col3:
         filtered_by_contractor = filtered_by_op if selected_contractor == "All" else filtered_by_op[filtered_by_op["Contractor"] == selected_contractor]
-        selected_shaker = st.selectbox("Shaker", ["All"] + sorted(filtered_by_contractor["flowline_Shakers"].dropna().unique().tolist()))
+        selected_shaker = st.selectbox("Select Shaker", ["All"] + sorted(filtered_by_contractor["flowline_Shakers"].dropna().unique().tolist()))
     with col4:
         filtered_by_shaker = filtered_by_contractor if selected_shaker == "All" else filtered_by_contractor[filtered_by_contractor["flowline_Shakers"] == selected_shaker]
-        selected_hole = st.selectbox("Hole Size", ["All"] + sorted(filtered_by_shaker["Hole_Size"].dropna().unique().tolist()))
+        selected_hole = st.selectbox("Select Hole Size", ["All"] + sorted(filtered_by_shaker["Hole_Size"].dropna().unique().tolist()))
 
     filtered = filtered_by_shaker if selected_hole == "All" else filtered_by_shaker[filtered_by_shaker["Hole_Size"] == selected_hole]
 
 # ---------- METRICS ----------
-st.markdown("### 📊 Key Metrics")
+st.markdown("### 📈 Key Performance Metrics")
 m1, m2, m3 = st.columns(3)
 with m1:
     st.metric("Avg Total Dilution", f"{filtered['Total_Dil'].mean():,.2f} BBLs")
@@ -56,85 +51,54 @@ with m3:
     st.metric("Avg DSRE", f"{filtered['DSRE'].mean()*100:.1f}%")
 
 # ---------- MAIN TABS ----------
-tabs = st.tabs([
-    "🧾 Well Overview", 
-    "📋 Summary & Charts", 
-    "📊 Statistical Insights", 
-    "📈 Advanced Analytics", 
-    "🧮 Multi-Well Comparison", 
-    "⚙️ Advanced Tab"
-])
+tabs = st.tabs(["🧾 Well Overview", "📋 Summary & Charts", "📊 Statistical Insights", "📈 Advanced Analytics", "🧮 Multi-Well Comparison"])
 
-# ---------- ADVANCED FILTERS TAB ----------
-with tabs[5]:
-    st.markdown("### ⚙️ Advanced Filters")
-    st.info("Use sliders and dropdowns to drill down on performance.")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if "IntLength" in data.columns:
-            min_val, max_val = int(data["IntLength"].min()), int(data["IntLength"].max())
-            int_range = st.slider("Interval Length", min_val, max_val, (min_val, max_val))
-            filtered = filtered[(filtered["IntLength"] >= int_range[0]) & (filtered["IntLength"] <= int_range[1])]
-        if "AMW" in data.columns:
-            min_amw, max_amw = float(data["AMW"].min()), float(data["AMW"].max())
-            amw_range = st.slider("Average Mud Weight (AMW)", min_amw, max_amw, (min_amw, max_amw))
-            filtered = filtered[(filtered["AMW"] >= amw_range[0]) & (filtered["AMW"] <= amw_range[1])]
-
-    with col2:
-        if "Average_LGS%" in data.columns:
-            lgs_min, lgs_max = float(data["Average_LGS%"].min()), float(data["Average_LGS%"].max())
-            lgs_range = st.slider("Average LGS%", lgs_min, lgs_max, (lgs_min, lgs_max))
-            filtered = filtered[(filtered["Average_LGS%"] >= lgs_range[0]) & (filtered["Average_LGS%"] <= lgs_range[1])]
-
-        if "TD_Date" in data.columns and not data["TD_Date"].isnull().all():
-            try:
-                data["TD_Date"] = pd.to_datetime(data["TD_Date"], errors='coerce')
-                data["TD_Year"] = data["TD_Date"].dt.year
-                data["TD_Month"] = data["TD_Date"].dt.strftime('%B')
-
-                td_years = sorted(data["TD_Year"].dropna().unique())
-                td_months = ["January", "February", "March", "April", "May", "June",
-                             "July", "August", "September", "October", "November", "December"]
-
-                selected_year = st.selectbox("Select TD Year", options=["All"] + [int(y) for y in td_years])
-                selected_month = st.selectbox("Select TD Month", options=["All"] + td_months)
-
-                if selected_year != "All":
-                    filtered = filtered[filtered["TD_Year"] == selected_year]
-                if selected_month != "All":
-                    filtered = filtered[filtered["TD_Month"] == selected_month]
-            except Exception as e:
-                st.warning(f"⚠️ TD_Date processing failed: {e}")
-
-    st.markdown("### 🔍 Filtered Results Preview")
-    st.dataframe(filtered)
-
-# ---------- FOOTER ----------
-st.markdown("""
-<div style='position: fixed; left: 0; bottom: 0; width: 100%; background-color: #1c1c1c; color: white; text-align: center; padding: 8px 0; font-size: 0.9rem; z-index: 999;'>
-    &copy; 2025 Derrick Corp | Designed for drilling performance insights
-</div>
-""", unsafe_allow_html=True)
 
 # ---------- TAB 1: WELL OVERVIEW ----------
 with tabs[0]:
     st.subheader("📄 Well Overview")
     st.markdown("Analyze well-level performance metrics as grouped column bar charts.")
 
-    selected_metric = st.selectbox("Choose a metric to visualize", ["Total_Dil", "Total_SCE", "DSRE"])
+    available_metrics = ["DSRE", "Total_SCE", "Total_Dil", "ROP", "Temp", "DOW", "AMW", 
+                         "Drilling_Hours", "Haul_OFF", "Base_Oil", "Water", "Weight_Material"]
 
-    # Prepare data for visualization
-    metric_data = filtered[["Well_Name", selected_metric]].dropna()
-    metric_data = metric_data.groupby("Well_Name")[selected_metric].mean().reset_index()
-    metric_data.rename(columns={selected_metric: "Value"}, inplace=True)
+    selected_metric = st.selectbox("Choose a metric to visualize", available_metrics)
 
-    import plotly.express as px
+    if "Metric" in data.columns and "Value" in data.columns:
+        metric_data = data[data["Metric"] == selected_metric]
+    else:
+        metric_data = pd.melt(
+            data,
+            id_vars=["Well_Name"],
+            value_vars=[col for col in available_metrics if col in data.columns],
+            var_name="Metric",
+            value_name="Value"
+        )
+        metric_data = metric_data[metric_data["Metric"] == selected_metric]
+
     fig = px.bar(metric_data, x="Well_Name", y="Value", title=f"Well Name vs {selected_metric}")
     st.plotly_chart(fig, use_container_width=True)
 
+    st.markdown("### 🧾 Well-Level Overview")
+    numeric_cols = [
+        "DSRE", "Discard Ratio", "Total_SCE", "Total_Dil", "ROP", "Temp", "DOW", "AMW",
+        "Drilling_Hours", "Haul_OFF", "Base_Oil", "Water", "Weight_Material",
+        "Chemicals", "Dilution_Ratio", "Solids_Generated"
+    ]
 
-# ---------- TAB 2: SUMMARY & CHARTS ----------
+    available_cols = [col for col in numeric_cols if col in filtered.columns]
+    melted_df = filtered[["Well_Name"] + available_cols].melt(id_vars="Well_Name", var_name="Metric", value_name="Value")
+
+    if not melted_df.empty:
+        fig2 = px.bar(melted_df, x="Well_Name", y="Value", color="Metric", barmode="group",
+                      title="Well Name vs Key Metrics", height=600)
+        st.plotly_chart(fig2, use_container_width=True)
+    else:
+        st.warning("No valid numeric data found for chart.")
+
+
+# ---------- TAB 2: SUMMARY + CHARTS ----------
 with tabs[1]:
     st.markdown("### 📌 Summary & Charts")
 
@@ -381,4 +345,23 @@ This section compares **shaker performance** across rig setups:
         else:
             st.info("ℹ️ Please select at least one metric to compare.")
     else:
-        st.warning("⚠️ 'flowline_Shakers' column not found in dataset.")"
+        st.warning("⚠️ 'flowline_Shakers' column not found in dataset.")
+
+
+
+# Global Search Functionality
+st.subheader("🔍 Global Search")
+search_term = st.text_input("Enter keyword to search across all columns:")
+
+if search_term:
+    # Convert search term to lowercase
+    search_term = search_term.lower()
+
+    # Filter dataset based on whether any column contains the search term
+    mask = data.apply(lambda row: row.astype(str).str.lower().str.contains(search_term).any(), axis=1)
+    filtered_data = data[mask]
+
+    st.success(f"Displaying {len(filtered_data)} result(s) matching '{search_term}'")
+    st.dataframe(filtered_data)
+else:
+    st.dataframe(data)
